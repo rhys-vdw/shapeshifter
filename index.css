@@ -1,0 +1,9 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+#renderCanvas {
+  width: 640px;
+  height: 480px;
+}

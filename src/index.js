@@ -1,1 +1,2 @@
-console.log('blah!');
+//import './test';
+import './game';
