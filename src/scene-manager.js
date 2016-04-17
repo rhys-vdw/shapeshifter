@@ -16,7 +16,7 @@ function createScene(engine) {
 function createTileManager(scene) {
   return new SpriteManager(
     'tile manager',
-    '/images/tile.png',
+    'images/tile.png',
     200,
     16,
     scene
@@ -26,7 +26,7 @@ function createTileManager(scene) {
 function createPlayerManager(scene) {
   return new SpriteManager(
     'player manager',
-    '/images/man.png',
+    'images/man.png',
     1,
     32,
     scene
