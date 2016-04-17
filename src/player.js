@@ -32,7 +32,33 @@ export default class Player {
   }
 
   collidedWith(tile) {
-    //console.log('collided with!', tile);
+    const halfTileWidth = tile.width / 2;
+    const halfTileHeight = tile.height / 2;
+    const halfPlayerWidth = this.sprite.width / 2;
+    const halfPlayerHeight = this.sprite.height / 2;
+
+    const halfWidths = halfTileWidth + halfPlayerWidth;
+    const halfHeights = halfTileHeight + halfPlayerHeight;
+
+    const offset = this.sprite.position.subtract(tile.position);
+    const overlapX = Math.abs(offset.x) - halfWidths;
+    const overlapY = Math.abs(offset.y) - halfHeights;
+
+    if (overlapY >= overlapX) {
+      if (offset.y < 0) {
+        this.sprite.position.y += overlapY;
+      } else {
+        this.sprite.position.y -= overlapY;
+      }
+      this.velocity.y = 0;
+    } else {
+      if (offset.x < 0) {
+        this.sprite.position.x += overlapX;
+      } else {
+        this.sprite.position.x -= overlapX;
+      }
+      this.velocity.x = 0;
+    }
   }
 
   walkLeft() {
