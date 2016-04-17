@@ -105,6 +105,7 @@ export default class SceneManager {
 
     const { player, camera, entities, tiles } = this;
 
+    // Camera follow.
     camera.position.x = Math.max(
       camera.position.x,
       player.sprite.position.x
