@@ -4,6 +4,8 @@ import BABYLON, {
 import * as mapBuilder from './map-builder';
 import Player from './player';
 import * as mapGenerator from './map-generator';
+import { remove } from 'lodash';
+import BulletFactory from './bullet-factory';
 
 window.BABYLON = BABYLON;
 
@@ -17,7 +19,7 @@ function createTileManager(scene) {
   return new SpriteManager(
     'tile manager',
     'images/tile.png',
-    200,
+    2000,
     16,
     scene
   );
@@ -67,11 +69,13 @@ export default class SceneManager {
     this.tiles = [];
 
     //this.createTile({ x: 0, y: -5 });
-    this.createTiles(mapGenerator.getSection(0, 20));
+    this.createTiles(mapGenerator.getSection(0, 100));
 
     const playerManager = createPlayerManager(this.scene);
 
-    const player = new Player(new Sprite('Player', playerManager));
+    const bulletFactory = new BulletFactory(this);
+    const player = new Player(new Sprite('Player', playerManager), bulletFactory);
+    player.sprite.position.x = 10;
     player.sprite.width = 2;
     player.sprite.height = 2;
     this.entities = [player];
@@ -93,17 +97,42 @@ export default class SceneManager {
     this.tiles.push(sprite);
   }
 
-  render() {
-    const { player } = this;
-    const deltaTime = this.engine.getDeltaTime() / 1000;
-    this.camera.position.x = player.sprite.position.x;
-    this.entities.forEach(e => e.update(deltaTime));
+  addEntity(entity) {
+    this.entities.push(entity);
+  }
 
-    for (const tile of this.tiles) {
+  render() {
+
+    const { player, camera, entities, tiles } = this;
+
+    const time = new Date().valueOf() / 1000;
+    const deltaTime = this.engine.getDeltaTime() / 1000;
+
+    camera.position.x = Math.max(
+      camera.position.x,
+      player.sprite.position.x
+    );
+
+    // First remove any destroyed entities.
+    remove(entities, e => {
+      if (e.shouldDestroy) {
+        e.sprite.dispose();
+        return true;
+      }
+      return false;
+    });
+
+    // Update all remaining entiteis.
+    entities.forEach(e => e.update({ deltaTime, time }));
+
+    // Check for collisions.
+    for (const tile of tiles) {
       if (intersects(tile, player.sprite)) {
-        player.collidedWith(tile);
+        player.onCollision(tile);
       }
     }
+
+    // Render scene.
     this.scene.render();
   }
 }
