@@ -150,9 +150,15 @@
 	
 	var _player2 = _interopRequireDefault(_player);
 	
-	var _mapGenerator = __webpack_require__(7);
+	var _mapGenerator = __webpack_require__(10);
 	
 	var mapGenerator = _interopRequireWildcard(_mapGenerator);
+	
+	var _lodash = __webpack_require__(8);
+	
+	var _bulletFactory = __webpack_require__(12);
+	
+	var _bulletFactory2 = _interopRequireDefault(_bulletFactory);
 	
 	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 	
@@ -169,7 +175,7 @@
 	}
 	
 	function createTileManager(scene) {
-	  return new _babylonjs.SpriteManager('tile manager', 'images/tile.png', 200, 16, scene);
+	  return new _babylonjs.SpriteManager('tile manager', 'images/tile.png', 2000, 16, scene);
 	}
 	
 	function createPlayerManager(scene) {
@@ -205,11 +211,13 @@
 	    this.tiles = [];
 	
 	    //this.createTile({ x: 0, y: -5 });
-	    this.createTiles(mapGenerator.getSection(0, 20));
+	    this.createTiles(mapGenerator.getSection(0, 100));
 	
 	    var playerManager = createPlayerManager(this.scene);
 	
-	    var player = new _player2.default(new _babylonjs.Sprite('Player', playerManager));
+	    var bulletFactory = new _bulletFactory2.default(this);
+	    var player = new _player2.default(new _babylonjs.Sprite('Player', playerManager), bulletFactory);
+	    player.sprite.position.x = 10;
 	    player.sprite.width = 2;
 	    player.sprite.height = 2;
 	    this.entities = [player];
@@ -236,28 +244,53 @@
 	      this.tiles.push(sprite);
 	    }
 	  }, {
+	    key: 'addEntity',
+	    value: function addEntity(entity) {
+	      this.entities.push(entity);
+	    }
+	  }, {
 	    key: 'render',
 	    value: function render() {
 	      var player = this.player;
+	      var camera = this.camera;
+	      var entities = this.entities;
+	      var tiles = this.tiles;
 	
+	
+	      var time = new Date().valueOf() / 1000;
 	      var deltaTime = this.engine.getDeltaTime() / 1000;
-	      this.camera.position.x = player.sprite.position.x;
-	      this.entities.forEach(function (e) {
-	        return e.update(deltaTime);
+	
+	      camera.position.x = Math.max(camera.position.x, player.sprite.position.x);
+	
+	      // First remove any destroyed entities.
+	      (0, _lodash.remove)(entities, function (e) {
+	        if (e.shouldDestroy) {
+	          e.sprite.dispose();
+	          return true;
+	        }
+	        return false;
 	      });
 	
+	      // Update all remaining entiteis.
+	      entities.forEach(function (e) {
+	        return e.update({ deltaTime: deltaTime, time: time });
+	      });
+	
+	      // Check for collisions.
 	      var _iteratorNormalCompletion = true;
 	      var _didIteratorError = false;
 	      var _iteratorError = undefined;
 	
 	      try {
-	        for (var _iterator = this.tiles[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	        for (var _iterator = tiles[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
 	          var tile = _step.value;
 	
 	          if (intersects(tile, player.sprite)) {
-	            player.collidedWith(tile);
+	            player.onCollision(tile);
 	          }
 	        }
+	
+	        // Render scene.
 	      } catch (err) {
 	        _didIteratorError = true;
 	        _iteratorError = err;
@@ -307,14 +340,25 @@
 	
 	function ramp(start, length) {
 	  var result = [];
-	  for (var i = 0; i < length; i++) {
-	    var x = start.x + i;
-	    for (var j = 0; j < i; j++) {
-	      result.push(block({ x: x, y: start.y + j }));
+	  if (length > 0) {
+	    for (var i = 0; i < length; i++) {
+	      var x = start.x + i;
+	      for (var j = 0; j < i; j++) {
+	        result.push(block({ x: x, y: start.y + j }));
+	      }
+	    }
+	  } else {
+	    for (var _i = 0; _i < -length; _i++) {
+	      var _x = start.x + _i;
+	      for (var _j = 0; _j < -length - _i; _j++) {
+	        result.push(block({ x: _x, y: start.y + _j }));
+	      }
 	    }
 	  }
 	  return result;
 	}
+	
+	window.ramp = ramp;
 
 /***/ },
 /* 5 */
@@ -334,6 +378,10 @@
 	
 	var _math = __webpack_require__(6);
 	
+	var _input = __webpack_require__(7);
+	
+	var _input2 = _interopRequireDefault(_input);
+	
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -341,23 +389,83 @@
 	var PLAYER_SPEED = 10;
 	var JUMP_SPEED = 15;
 	var DECELERATION = 0.1;
+	var FIRE_PERIOD = 0.1;
 	
-	window.lerpClamped = _math.lerpClamped;
+	var UP = 'ArrowUp';
+	var DOWN = 'ArrowDown';
+	var RIGHT = 'ArrowRight';
+	var LEFT = 'ArrowLeft';
+	var JUMP = 'KeyX';
+	var SHOOT = 'KeyZ';
+	
+	var Direction = {
+	  UP: 'UP',
+	  UP_RIGHT: 'UP_RIGHT',
+	  RIGHT: 'RIGHT',
+	  DOWN_RIGHT: 'DOWN_RIGHT',
+	  DOWN: 'DOWN',
+	  DOWN_LEFT: 'DOWN_LEFT',
+	  LEFT: 'LEFT',
+	  UP_LEFT: 'UP_LEFT'
+	};
+	
+	var State = {
+	  STANDING: 'STANDING',
+	  WALKING: 'WALKING',
+	  JUMPING: 'JUMPING'
+	};
 	
 	var Player = function () {
-	  function Player(sprite) {
+	  function Player(sprite, bulletFactory) {
+	    var _this = this;
+	
 	    _classCallCheck(this, Player);
 	
 	    this.sprite = sprite;
 	    this.velocity = _babylonjs.Vector3.Zero();
 	    this.acceleration = new _babylonjs.Vector3(0, -3, 0);
-	    this.registerKeybindings();
 	    this.isWalking = false;
+	    this.isFiring = false;
+	    this.lastFireTime = 0;
+	    this.bulletFactory = bulletFactory;
+	    this.aim = new _babylonjs.Vector3(1, 0, 0);
+	
+	    _input2.default.addListener(JUMP, function () {
+	      return _this.jump();
+	    });
 	  }
 	
 	  _createClass(Player, [{
 	    key: 'update',
-	    value: function update(deltaTime) {
+	    value: function update(_ref) {
+	      var deltaTime = _ref.deltaTime;
+	      var time = _ref.time;
+	
+	
+	      // Update shooting.
+	
+	      console.log('shoot?', _input2.default.isKeyDown(SHOOT));
+	      if (_input2.default.isKeyDown(SHOOT) && this.lastFireTime + FIRE_PERIOD <= time) {
+	        this.bulletFactory.create(this.sprite.position, new _babylonjs.Vector3(30, 0, 0));
+	        this.lastFireTime = time;
+	      }
+	
+	      // Update walking.
+	
+	      if (_input2.default.isKeyDown(RIGHT)) {
+	        this.acceleration.x = 5;
+	        this.isFacingRight = true;
+	      } else if (_input2.default.isKeyDown(LEFT)) {
+	        this.acceleration.x = -5;
+	        this.isFacingRight = false;
+	      } else {
+	        this.acceleration.x = 0;
+	      }
+	
+	      if (_input2.default.isKeyDown(JUMP)) {
+	        this.velocity.y = JUMP_SPEED;
+	      }
+	
 	      this.velocity.addInPlace(this.acceleration.scale(deltaTime * PLAYER_SPEED));
 	      this.sprite.position.addInPlace(this.velocity.scale(deltaTime));
 	
@@ -381,8 +489,8 @@
 	      this.sprite.invertU = this.velocity.x < 0;
 	    }
 	  }, {
-	    key: 'collidedWith',
-	    value: function collidedWith(tile) {
+	    key: 'onCollision',
+	    value: function onCollision(tile) {
 	      var halfTileWidth = tile.width / 2;
 	      var halfTileHeight = tile.height / 2;
 	      var halfPlayerWidth = this.sprite.width / 2;
@@ -410,51 +518,6 @@
 	        }
 	        this.velocity.x = 0;
 	      }
-	    }
-	  }, {
-	    key: 'walkLeft',
-	    value: function walkLeft() {
-	      this.acceleration.x = -5;
-	    }
-	  }, {
-	    key: 'walkRight',
-	    value: function walkRight() {
-	      this.acceleration.x = 5;
-	    }
-	  }, {
-	    key: 'stopWalking',
-	    value: function stopWalking() {
-	      this.acceleration.x = 0;
-	    }
-	  }, {
-	    key: 'jump',
-	    value: function jump() {
-	      this.velocity.y = JUMP_SPEED;
-	    }
-	  }, {
-	    key: 'registerKeybindings',
-	    value: function registerKeybindings() {
-	      var _this = this;
-	
-	      window.addEventListener('keydown', function (event) {
-	        switch (event.code) {
-	          case 'ArrowRight':
-	            _this.walkRight();return;
-	          case 'ArrowLeft':
-	            _this.walkLeft();return;
-	          case 'KeyX':
-	            _this.jump();return;
-	        }
-	      });
-	
-	      window.addEventListener('keyup', function (event) {
-	        switch (event.code) {
-	          case 'ArrowRight':
-	            _this.stopWalking();return;
-	          case 'ArrowLeft':
-	            _this.stopWalking();return;
-	        }
-	      });
 	    }
 	  }]);
 	
@@ -497,25 +560,68 @@
 	Object.defineProperty(exports, "__esModule", {
 	  value: true
 	});
-	exports.getSection = getSection;
 	
-	var _mapBuilder = __webpack_require__(4);
-	
-	var mapBuilder = _interopRequireWildcard(_mapBuilder);
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
 	var _lodash = __webpack_require__(8);
 	
-	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
-	var HEIGHT = 10;
+	var Input = function () {
+	  function Input() {
+	    var _this = this;
 	
-	function bounds(offset, length) {
-	  return (0, _lodash.flatten)([mapBuilder.row({ x: offset, y: HEIGHT - 1 }, length), mapBuilder.row({ x: offset, y: -HEIGHT }, length)]);
-	}
+	    _classCallCheck(this, Input);
 	
-	function getSection(offset, length) {
-	  return (0, _lodash.flatten)([bounds(offset, length), mapBuilder.ramp({ x: offset, y: -HEIGHT + 1 }, 5)]);
-	}
+	    this.state = {};
+	    this.listeners = {};
+	
+	    window.addEventListener('keydown', function (event) {
+	      return _this.handleKeydown(event);
+	    });
+	    window.addEventListener('keyup', function (event) {
+	      return _this.handleKeyup(event);
+	    });
+	  }
+	
+	  _createClass(Input, [{
+	    key: 'handleKeyup',
+	    value: function handleKeyup(event) {
+	      this.state[event.code] = false;
+	    }
+	  }, {
+	    key: 'handleKeydown',
+	    value: function handleKeydown(event) {
+	      var handlers = this.listeners[event];
+	      (0, _lodash.each)(handlers, function (handler) {
+	        return handler();
+	      });
+	      this.state[event.code] = true;
+	    }
+	  }, {
+	    key: 'isKeyDown',
+	    value: function isKeyDown(code) {
+	      return this.state[code] || false;
+	    }
+	  }, {
+	    key: 'addListener',
+	    value: function addListener(code, handler) {
+	      if (this.listeners[code] == null) {
+	        this.listeners[code] = [];
+	      }
+	      this.listeners[code].push(handler);
+	    }
+	  }, {
+	    key: 'removeListener',
+	    value: function removeListener(code, handler) {
+	      (0, _lodash.pull)(this.listeners[code], handler);
+	    }
+	  }]);
+	
+	  return Input;
+	}();
+	
+	exports.default = new Input();
 
 /***/ },
 /* 8 */
@@ -16566,6 +16672,170 @@
 		return module;
 	}
 
+
+/***/ },
+/* 10 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.getSection = getSection;
+	
+	var _mapBuilder = __webpack_require__(4);
+	
+	var mapBuilder = _interopRequireWildcard(_mapBuilder);
+	
+	var _random = __webpack_require__(11);
+	
+	var random = _interopRequireWildcard(_random);
+	
+	var _lodash = __webpack_require__(8);
+	
+	function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+	
+	var HEIGHT = 10;
+	
+	function bounds(offset, length) {
+	  return (0, _lodash.flatten)([mapBuilder.row({ x: offset, y: HEIGHT - 1 }, length), mapBuilder.row({ x: offset, y: -HEIGHT }, length)]);
+	}
+	
+	function rampInRange(offset, range, size) {
+	  return mapBuilder.ramp({
+	    x: offset + random.intRange(0, range - Math.abs(size)),
+	    y: -HEIGHT + 1
+	  }, size);
+	}
+	
+	function rampsInRange(offset, range, rampCount, minSize, maxSize) {
+	  var segment = Math.floor(range / rampCount);
+	  return (0, _lodash.flatten)((0, _lodash.times)(rampCount).map(function (i) {
+	    var rampOffset = offset + i * segment;
+	    var size = random.intRange(minSize, maxSize);
+	    return rampInRange(rampOffset, segment, size);
+	  }));
+	}
+	
+	function getSection(offset, length) {
+	
+	  var rampLength = random.intRange(3, 6);
+	
+	  return (0, _lodash.flatten)([bounds(offset, length),
+	  //rampInRange(offset, length, random.range(3, 6))
+	  rampsInRange(offset, length, Math.floor(length / 10), -8, 8)]);
+	}
+
+/***/ },
+/* 11 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.outOf = outOf;
+	exports.floatRange = floatRange;
+	exports.intRange = intRange;
+	
+	var _math = __webpack_require__(6);
+	
+	function outOf(total) {
+	  var shares = arguments.length <= 1 || arguments[1] === undefined ? 1 : arguments[1];
+	
+	  return shares > total || Math.random() * total > shares;
+	}
+	
+	function floatRange(from, to) {
+	  if (false) {
+	    if (from > to) throw TypeError('from > to: from=' + from + ', to=' + to);
+	  }
+	  return (0, _math.lerp)(from, to, Math.random());
+	}
+	
+	function intRange(from, to) {
+	  if (false) {
+	    if (from > to) throw TypeError('from > to: from=' + from + ', to=' + to);
+	  }
+	  return Math.floor(floatRange(from, to));
+	}
+
+/***/ },
+/* 12 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	
+	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+	
+	var _babylonjs = __webpack_require__(2);
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+	
+	var nextId = 0;
+	
+	var Bullet = function () {
+	  function Bullet(sprite, velocity) {
+	    _classCallCheck(this, Bullet);
+	
+	    this.id = nextId++;
+	    this.sprite = sprite;
+	    this.velocity = velocity;
+	  }
+	
+	  _createClass(Bullet, [{
+	    key: 'update',
+	    value: function update(_ref) {
+	      var deltaTime = _ref.deltaTime;
+	      var time = _ref.time;
+	
+	      var step = this.velocity.scale(deltaTime);
+	      this.sprite.position.addInPlace(step);
+	    }
+	  }, {
+	    key: 'onCollision',
+	    value: function onCollision(other) {
+	      this.destroy();
+	    }
+	  }, {
+	    key: 'destroy',
+	    value: function destroy() {
+	      this.shouldDestroy = true;
+	    }
+	  }]);
+	
+	  return Bullet;
+	}();
+	
+	var BulletFactory = function () {
+	  function BulletFactory(sceneManager) {
+	    _classCallCheck(this, BulletFactory);
+	
+	    this.sceneManager = sceneManager;
+	    this.spriteManager = new _babylonjs.SpriteManager('Bullet sprite manager', 'images/bullet.png', 100, 8, sceneManager.scene);
+	  }
+	
+	  _createClass(BulletFactory, [{
+	    key: 'create',
+	    value: function create(position, velocity) {
+	      var sprite = new _babylonjs.Sprite('Bullet', this.spriteManager);
+	      sprite.position.copyFrom(position);
+	      var bullet = new Bullet(sprite, velocity);
+	      this.sceneManager.addEntity(bullet);
+	      return bullet;
+	    }
+	  }]);
+	
+	  return BulletFactory;
+	}();
+
+	exports.default = BulletFactory;
 
 /***/ }
 /******/ ]);
