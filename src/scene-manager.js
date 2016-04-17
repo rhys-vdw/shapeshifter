@@ -17,7 +17,7 @@ function createTileManager(scene) {
   return new SpriteManager(
     'tile manager',
     'images/tile.png',
-    200,
+    2000,
     16,
     scene
   );
@@ -67,11 +67,12 @@ export default class SceneManager {
     this.tiles = [];
 
     //this.createTile({ x: 0, y: -5 });
-    this.createTiles(mapGenerator.getSection(0, 20));
+    this.createTiles(mapGenerator.getSection(0, 100));
 
     const playerManager = createPlayerManager(this.scene);
 
     const player = new Player(new Sprite('Player', playerManager));
+    player.sprite.position.x = 10;
     player.sprite.width = 2;
     player.sprite.height = 2;
     this.entities = [player];
@@ -96,7 +97,10 @@ export default class SceneManager {
   render() {
     const { player } = this;
     const deltaTime = this.engine.getDeltaTime() / 1000;
-    this.camera.position.x = player.sprite.position.x;
+    this.camera.position.x = Math.max(
+      this.camera.position.x,
+      player.sprite.position.x
+    );;
     this.entities.forEach(e => e.update(deltaTime));
 
     for (const tile of this.tiles) {
