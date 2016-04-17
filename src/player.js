@@ -4,19 +4,77 @@ import { lerpClamped } from './math';
 const PLAYER_SPEED = 10;
 const JUMP_SPEED = 15;
 const DECELERATION = 0.1;
+const FIRE_PERIOD = 0.1;
 
-window.lerpClamped = lerpClamped;
+const UP = 'ArrowUp';
+const DOWN = 'ArrowDown';
+const RIGHT = 'ArrowRight';
+const LEFT = 'ArrowLeft';
+const JUMP = 'KeyX';
+const SHOOT = 'KeyZ';
+
+const Direction = {
+  UP: 'UP',
+  UP_RIGHT: 'UP_RIGHT',
+  RIGHT: 'RIGHT',
+  DOWN_RIGHT: 'DOWN_RIGHT',
+  DOWN: 'DOWN',
+  DOWN_LEFT: 'DOWN_LEFT',
+  LEFT: 'LEFT',
+  UP_LEFT: 'UP_LEFT',
+}
+
+const State = {
+  STANDING: 'STANDING',
+  WALKING: 'WALKING',
+  JUMPING: 'JUMPING',
+}
+
+import Input from './input';
 
 export default class Player {
-  constructor(sprite) {
+  constructor(sprite, bulletFactory) {
     this.sprite = sprite;
     this.velocity = Vector3.Zero();
     this.acceleration = new Vector3(0, -3, 0);
-    this.registerKeybindings();
     this.isWalking = false;
+    this.isFiring = false;
+    this.lastFireTime = 0;
+    this.bulletFactory = bulletFactory;
+    this.aim = new Vector3(1, 0, 0);
+
+    Input.addListener(JUMP, () => this.jump());
   }
 
-  update(deltaTime) {
+  update({ deltaTime, time }) {
+
+    // Update shooting.
+
+    console.log('shoot?', Input.isKeyDown(SHOOT));
+    if (Input.isKeyDown(SHOOT) && this.lastFireTime + FIRE_PERIOD <= time) {
+      this.bulletFactory.create(
+        this.sprite.position,
+        new Vector3(30, 0, 0)
+      );
+      this.lastFireTime = time;
+    }
+
+    // Update walking.
+
+    if (Input.isKeyDown(RIGHT)) {
+      this.acceleration.x = 5;
+      this.isFacingRight = true;
+    } else if (Input.isKeyDown(LEFT)) {
+      this.acceleration.x = -5;
+      this.isFacingRight = false;
+    } else {
+      this.acceleration.x = 0;
+    }
+
+    if (Input.isKeyDown(JUMP)) {
+      this.velocity.y = JUMP_SPEED;
+    }
+
     this.velocity.addInPlace(this.acceleration.scale(deltaTime * PLAYER_SPEED));
     this.sprite.position.addInPlace(this.velocity.scale(deltaTime));
 
@@ -40,7 +98,7 @@ export default class Player {
     this.sprite.invertU = this.velocity.x < 0;
   }
 
-  collidedWith(tile) {
+  onCollision(tile) {
     const halfTileWidth = tile.width / 2;
     const halfTileHeight = tile.height / 2;
     const halfPlayerWidth = this.sprite.width / 2;
@@ -68,38 +126,5 @@ export default class Player {
       }
       this.velocity.x = 0;
     }
-  }
-
-  walkLeft() {
-    this.acceleration.x = -5;
-  }
-
-  walkRight() {
-    this.acceleration.x = 5;
-  }
-
-  stopWalking() {
-    this.acceleration.x = 0;
-  }
-
-  jump() {
-    this.velocity.y = JUMP_SPEED;
-  }
-
-  registerKeybindings() {
-    window.addEventListener('keydown', event => {
-      switch (event.code) {
-        case 'ArrowRight': this.walkRight(); return;
-        case 'ArrowLeft': this.walkLeft(); return;
-        case 'KeyX': this.jump(); return;
-      }
-    });
-
-    window.addEventListener('keyup', event => {
-      switch (event.code) {
-        case 'ArrowRight': this.stopWalking(); return;
-        case 'ArrowLeft': this.stopWalking(); return;
-      }
-    });
   }
 }
