@@ -14,18 +14,21 @@ window.addEventListener('resize', () => {
   // TODO
 });
 
+let time = 0;
+function loop() {
+  const deltaTime = engine.getDeltaTime() / 1000;
+  time += deltaTime;
+  manager.render({ deltaTime, time });
+}
+
 window.addEventListener('blur', () => {
-  // TODO
+  engine.stopRenderLoop(loop);
 });
 
 window.addEventListener('focus', () => {
-  // TODO
+  engine.runRenderLoop(loop);
 });
 
-
-function loop() {
-  manager.render();
-}
 
 engine.resize();
 engine.runRenderLoop(loop);
