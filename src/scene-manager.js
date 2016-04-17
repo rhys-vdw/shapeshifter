@@ -3,6 +3,7 @@ import BABYLON, {
 } from 'babylonjs';
 import * as mapBuilder from './map-builder';
 import Player from './player';
+import * as mapGenerator from './map-generator';
 
 window.BABYLON = BABYLON;
 
@@ -65,17 +66,20 @@ export default class SceneManager {
     this.camera = createCamera(this.scene, 10);
     this.tiles = [];
 
-    this.createTile({ x: 0, y: -5 });
-    this.target = { position: Vector3.Zero(), rotation: Vector3.Zero() };
-    this.camera.target = this.target;
+    //this.createTile({ x: 0, y: -5 });
+    this.createTiles(mapGenerator.getSection(0, 20));
 
     const playerManager = createPlayerManager(this.scene);
 
     const player = new Player(new Sprite('Player', playerManager));
-    player.width = 2;
-    player.height = 2;
+    player.sprite.width = 2;
+    player.sprite.height = 2;
     this.entities = [player];
     this.player = player;
+  }
+
+  createTiles(tiles) {
+    tiles.forEach(tile => this.createTile(tile.position));
   }
 
   createTile(position) {
@@ -86,12 +90,14 @@ export default class SceneManager {
     );
     sprite.position.x = position.x;
     sprite.position.y = position.y;
+    console.log('sprite', sprite);
     this.tiles.push(sprite);
   }
 
   render() {
     const { player } = this;
     const deltaTime = this.engine.getDeltaTime() / 1000;
+    this.camera.position.x = player.sprite.position.x;
     this.entities.forEach(e => e.update(deltaTime));
 
     for (const tile of this.tiles) {
