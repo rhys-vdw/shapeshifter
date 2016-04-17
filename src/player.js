@@ -1,7 +1,11 @@
 import BABYLON, { Vector3, Sprite } from 'babylonjs';
+import { lerpClamped } from './math';
 
 const PLAYER_SPEED = 10;
 const JUMP_SPEED = 15;
+const DECELERATION = 0.1;
+
+window.lerpClamped = lerpClamped;
 
 export default class Player {
   constructor(sprite) {
@@ -27,6 +31,10 @@ export default class Player {
         this.sprite.playAnimation(0, 2, true, 100);
         this.isWalking = true;
       }
+    }
+
+    if (Math.abs(this.acceleration.x) < 0.1) {
+      this.velocity.x = lerpClamped(this.velocity.x, 0, DECELERATION);
     }
 
     this.sprite.invertU = this.velocity.x < 0;

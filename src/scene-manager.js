@@ -90,7 +90,6 @@ export default class SceneManager {
     );
     sprite.position.x = position.x;
     sprite.position.y = position.y;
-    console.log('sprite', sprite);
     this.tiles.push(sprite);
   }
 
