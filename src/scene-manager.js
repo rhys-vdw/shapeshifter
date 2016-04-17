@@ -111,7 +111,7 @@ export default class SceneManager {
       player.sprite.position.x
     );
 
-    // First remove any destroyed entities.
+    // First remove any destroyed entities. (Before update.)
     remove(entities, e => {
       if (e.shouldDestroy) {
         e.sprite.dispose();

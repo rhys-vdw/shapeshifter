@@ -1,11 +1,12 @@
 import BABYLON, { Vector3, Sprite } from 'babylonjs';
-import { lerpClamped } from './math';
+import { lerpClamped, moveTowardClamped } from './math';
 
 const PLAYER_SPEED = 10;
 const JUMP_SPEED = 15;
 const DECELERATION = 0.1;
 const BULLET_SPEED = 40;
 const FIRE_PERIOD = 0.1;
+const GRAVITY = -50;
 
 const Key = {
   UP: 'ArrowUp',
@@ -48,24 +49,65 @@ const State = {
 
 import Input from './input';
 
+class Axis {
+  constructor({ sensitivity = 1, gravity = 1, upKey, downKey }) {
+    this.sensitivity = sensitivity;
+    this.gravity = gravity;
+    this.upKey = upKey;
+    this.downKey = downKey;
+    this.value = 0;
+  }
+
+  get() {
+    return this.value;
+  }
+
+  update({ deltaTime }) {
+    let target = 0;
+    if (Input.isKeyDown(this.upKey)) {
+      target += 1;
+    }
+    if (Input.isKeyDown(this.downKey)) {
+      target -= 1;
+    }
+
+    console.log('target', target);
+    this.value = moveTowardClamped(
+      this.value,
+      target,
+      (target == 0 ?  this.gravity : this.sensitivity) * deltaTime
+    );
+  }
+}
+
 export default class Player {
   constructor(sprite, bulletFactory) {
     this.sprite = sprite;
     this.velocity = Vector3.Zero();
-    this.acceleration = new Vector3(0, -3, 0);
     this.isWalking = false;
     this.isFiring = false;
     this.lastFireTime = 0;
     this.bulletFactory = bulletFactory;
     this.aim = new Vector3(1, 0, 0);
+    this.horizontalAxis = new Axis({
+      upKey: Key.RIGHT,
+      downKey: Key.LEFT,
+      sensitivity: 6,
+      gravity: 6
+    });
   }
 
   update({ deltaTime, time }) {
 
+    this.horizontalAxis.update({ deltaTime });
+    this.velocity.x = PLAYER_SPEED * this.horizontalAxis.get();
+    this.velocity.y += GRAVITY * deltaTime;
+
+    console.log('x', this.velocity.x);
+
     // Update aim and walking.
 
     if (Input.isKeyDown(Key.RIGHT)) {
-      this.acceleration.x = 5;
       this.isFacingRight = true;
       if (Input.isKeyDown(Key.UP)) {
         this.aim = Direction.UP_RIGHT;
@@ -75,7 +117,6 @@ export default class Player {
         this.aim = Direction.RIGHT;
       }
     } else if (Input.isKeyDown(Key.LEFT)) {
-      this.acceleration.x = -5;
       this.isFacingRight = false;
       if (Input.isKeyDown(Key.UP)) {
         this.aim = Direction.UP_LEFT;
@@ -85,8 +126,6 @@ export default class Player {
         this.aim = Direction.LEFT;
       }
     } else {
-      this.acceleration.x = 0;
-
       if (Input.isKeyDown(Key.UP)) {
         this.aim = Direction.UP;
       } else if (Input.isKeyDown(Key.DOWN)) {
@@ -106,7 +145,6 @@ export default class Player {
 
     // Update position.
 
-    this.velocity.addInPlace(this.acceleration.scale(deltaTime * PLAYER_SPEED));
     this.sprite.position.addInPlace(this.velocity.scale(deltaTime));
 
     // Update shooting.
@@ -133,11 +171,7 @@ export default class Player {
       }
     }
 
-    if (Math.abs(this.acceleration.x) < 0.1) {
-      this.velocity.x = lerpClamped(this.velocity.x, 0, DECELERATION);
-    }
-
-    this.sprite.invertU = this.velocity.x < 0;
+    this.sprite.invertU = !this.isFacingRight;
   }
 
   onCollision(tile) {
