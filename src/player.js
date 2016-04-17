@@ -1,12 +1,13 @@
 import BABYLON, { Vector3, Sprite } from 'babylonjs';
 
 const PLAYER_SPEED = 10;
+const JUMP_SPEED = 15;
 
 export default class Player {
   constructor(sprite) {
     this.sprite = sprite;
     this.velocity = Vector3.Zero();
-    this.acceleration = new Vector3(0, -0.5, 0);
+    this.acceleration = new Vector3(0, -3, 0);
     this.registerKeybindings();
     this.isWalking = false;
   }
@@ -73,11 +74,16 @@ export default class Player {
     this.acceleration.x = 0;
   }
 
+  jump() {
+    this.velocity.y = JUMP_SPEED;
+  }
+
   registerKeybindings() {
     window.addEventListener('keydown', event => {
       switch (event.code) {
         case 'ArrowRight': this.walkRight(); return;
         case 'ArrowLeft': this.walkLeft(); return;
+        case 'KeyX': this.jump(); return;
       }
     });
 
