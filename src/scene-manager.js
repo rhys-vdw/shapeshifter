@@ -123,9 +123,11 @@ export default class SceneManager {
     entities.forEach(e => e.update({ deltaTime, time }));
 
     // Check for collisions.
-    for (const tile of tiles) {
-      if (intersects(tile, player.sprite)) {
-        player.onCollision(tile);
+    for (const entity of entities) {
+      for (const tile of tiles) {
+        if (intersects(tile, entity.sprite)) {
+          entity.onCollision(tile);
+        }
       }
     }
 
