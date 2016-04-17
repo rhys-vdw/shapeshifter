@@ -111,17 +111,15 @@ export default class SceneManager {
       player.sprite.position.x
     );
 
-    // First remove any destroyed entities. (Before update.)
+    // First remove or update entities.
     remove(entities, e => {
       if (e.shouldDestroy) {
         e.sprite.dispose();
         return true;
       }
+      e.update({ deltaTime, time });
       return false;
     });
-
-    // Update all remaining entiteis.
-    entities.forEach(e => e.update({ deltaTime, time }));
 
     // Check for collisions.
     for (const entity of entities) {
