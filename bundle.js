@@ -261,6 +261,7 @@
 	      var entities = this.entities;
 	      var tiles = this.tiles;
 	
+	      // Camera follow.
 	
 	      camera.position.x = Math.max(camera.position.x, player.sprite.position.x);
 	
@@ -284,11 +285,33 @@
 	      var _iteratorError = undefined;
 	
 	      try {
-	        for (var _iterator = tiles[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var tile = _step.value;
+	        for (var _iterator = entities[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+	          var entity = _step.value;
+	          var _iteratorNormalCompletion2 = true;
+	          var _didIteratorError2 = false;
+	          var _iteratorError2 = undefined;
 	
-	          if (intersects(tile, player.sprite)) {
-	            player.onCollision(tile);
+	          try {
+	            for (var _iterator2 = tiles[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+	              var tile = _step2.value;
+	
+	              if (intersects(tile, entity.sprite)) {
+	                entity.onCollision(tile);
+	              }
+	            }
+	          } catch (err) {
+	            _didIteratorError2 = true;
+	            _iteratorError2 = err;
+	          } finally {
+	            try {
+	              if (!_iteratorNormalCompletion2 && _iterator2.return) {
+	                _iterator2.return();
+	              }
+	            } finally {
+	              if (_didIteratorError2) {
+	                throw _iteratorError2;
+	              }
+	            }
 	          }
 	        }
 	
@@ -575,6 +598,8 @@
 	exports.clamp = clamp;
 	exports.lerp = lerp;
 	exports.lerpClamped = lerpClamped;
+	exports.moveToward = moveToward;
+	exports.moveTowardClamped = moveTowardClamped;
 	function clamp(value, min, max) {
 	  return Math.min(Math.max(value, min), max);
 	}
@@ -585,6 +610,15 @@
 	
 	function lerpClamped(from, to, amount) {
 	  var unclamped = lerp(from, to, amount);
+	  return to > from ? clamp(unclamped, from, to) : clamp(unclamped, to, from);
+	}
+	
+	function moveToward(from, to, amount) {
+	  return from + Math.sign(to - from) * amount;
+	}
+	
+	function moveTowardClamped(from, to, amount) {
+	  var unclamped = moveToward(from, to, amount);
 	  return to > from ? clamp(unclamped, from, to) : clamp(unclamped, to, from);
 	}
 
@@ -16815,13 +16849,10 @@
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
-	var nextId = 0;
-	
 	var Bullet = function () {
 	  function Bullet(sprite, velocity) {
 	    _classCallCheck(this, Bullet);
 	
-	    this.id = nextId++;
 	    this.sprite = sprite;
 	    this.velocity = velocity;
 	  }
