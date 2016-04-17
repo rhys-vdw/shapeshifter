@@ -169,11 +169,11 @@
 	}
 	
 	function createTileManager(scene) {
-	  return new _babylonjs.SpriteManager('tile manager', '/images/tile.png', 200, 16, scene);
+	  return new _babylonjs.SpriteManager('tile manager', 'images/tile.png', 200, 16, scene);
 	}
 	
 	function createPlayerManager(scene) {
-	  return new _babylonjs.SpriteManager('player manager', '/images/man.png', 1, 32, scene);
+	  return new _babylonjs.SpriteManager('player manager', 'images/man.png', 1, 32, scene);
 	}
 	
 	function createCamera(scene, halfHeight) {
