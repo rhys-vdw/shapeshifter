@@ -100,7 +100,7 @@ export default class SceneManager {
     this.camera.position.x = Math.max(
       this.camera.position.x,
       player.sprite.position.x
-    );;
+    );
     this.entities.forEach(e => e.update(deltaTime));
 
     for (const tile of this.tiles) {

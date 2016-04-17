@@ -5,10 +5,15 @@ export function outOf(total, shares = 1) {
 }
 
 export function floatRange(from, to) {
+  if (__DEBUG__) {
+    if (from > to) throw TypeError(`from > to: from=${from}, to=${to}`);
+  }
   return lerp(from, to, Math.random());
 }
 
 export function intRange(from, to) {
-  if (from > to) throw Error(`from: ${from}, to: ${to}`);
+  if (__DEBUG__) {
+    if (from > to) throw TypeError(`from > to: from=${from}, to=${to}`);
+  }
   return Math.floor(floatRange(from, to));
 }
