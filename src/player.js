@@ -62,6 +62,10 @@ class Axis {
     return this.value;
   }
 
+  reset() {
+    this.value = 0;
+  }
+
   update({ deltaTime }) {
     let target = 0;
     if (Input.isKeyDown(this.upKey)) {
@@ -71,7 +75,6 @@ class Axis {
       target -= 1;
     }
 
-    console.log('target', target);
     this.value = moveTowardClamped(
       this.value,
       target,
@@ -95,47 +98,38 @@ export default class Player {
       sensitivity: 6,
       gravity: 6
     });
+    this.verticalAxis = new Axis({
+      upKey: Key.UP,
+      downKey: Key.DOWN,
+      sensitivity: 9,
+      gravity: 9
+    });
   }
 
   update({ deltaTime, time }) {
 
     this.horizontalAxis.update({ deltaTime });
+    this.verticalAxis.update({ deltaTime });
+
     this.velocity.x = PLAYER_SPEED * this.horizontalAxis.get();
     this.velocity.y += GRAVITY * deltaTime;
-
-    console.log('x', this.velocity.x);
 
     // Update aim and walking.
 
     if (Input.isKeyDown(Key.RIGHT)) {
       this.isFacingRight = true;
-      if (Input.isKeyDown(Key.UP)) {
-        this.aim = Direction.UP_RIGHT;
-      } else if (Input.isKeyDown(Key.DOWN)) {
-        this.aim = Direction.DOWN_RIGHT;
-      } else {
-        this.aim = Direction.RIGHT;
-      }
     } else if (Input.isKeyDown(Key.LEFT)) {
       this.isFacingRight = false;
-      if (Input.isKeyDown(Key.UP)) {
-        this.aim = Direction.UP_LEFT;
-      } else if (Input.isKeyDown(Key.DOWN)) {
-        this.aim = Direction.DOWN_LEFT;
-      } else {
-        this.aim = Direction.LEFT;
-      }
-    } else {
-      if (Input.isKeyDown(Key.UP)) {
-        this.aim = Direction.UP;
-      } else if (Input.isKeyDown(Key.DOWN)) {
-        this.aim = this.isFacingRight
-          ? Direction.DOWN_RIGHT : Direction.DOWN_LEFT;
-      } else {
-        this.aim = this.isFacingRight
-          ? Direction.RIGHT : Direction.LEFT;
-      }
     }
+
+    const horizontalAim = this.verticalAxis.get() === 0
+      ? (this.isFacingRight ? 1 : -1) : this.horizontalAxis.get();
+
+    this.aim.copyFromFloats(
+      horizontalAim,
+      this.verticalAxis.get(),
+      0
+    ).normalize();
 
     // Update jump.
 
@@ -156,7 +150,6 @@ export default class Player {
       );
       this.lastFireTime = time;
     }
-
 
     if (Math.abs(this.velocity.x) < 0.1) {
       if (this.isWalking) {
