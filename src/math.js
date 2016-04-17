@@ -12,3 +12,14 @@ export function lerpClamped(from, to, amount) {
     ? clamp(unclamped, from, to)
     : clamp(unclamped, to, from);
 }
+
+export function moveToward(from, to, amount) {
+  return from + Math.sign(to - from) * amount;
+}
+
+export function moveTowardClamped(from, to, amount) {
+  const unclamped = moveToward(from, to, amount);
+  return to > from
+    ? clamp(unclamped, from, to)
+    : clamp(unclamped, to, from);
+}

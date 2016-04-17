@@ -105,6 +105,7 @@ export default class SceneManager {
 
     const { player, camera, entities, tiles } = this;
 
+    // Camera follow.
     camera.position.x = Math.max(
       camera.position.x,
       player.sprite.position.x
@@ -123,9 +124,11 @@ export default class SceneManager {
     entities.forEach(e => e.update({ deltaTime, time }));
 
     // Check for collisions.
-    for (const tile of tiles) {
-      if (intersects(tile, player.sprite)) {
-        player.onCollision(tile);
+    for (const entity of entities) {
+      for (const tile of tiles) {
+        if (intersects(tile, entity.sprite)) {
+          entity.onCollision(tile);
+        }
       }
     }
 

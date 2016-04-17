@@ -1,10 +1,7 @@
 import { Sprite, SpriteManager } from 'babylonjs';
 
-let nextId = 0;
-
 class Bullet {
   constructor(sprite, velocity) {
-    this.id = nextId++;
     this.sprite = sprite;
     this.velocity = velocity;
   }
