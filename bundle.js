@@ -77,17 +77,20 @@
 	  // TODO
 	});
 	
+	var time = 0;
+	function loop() {
+	  var deltaTime = engine.getDeltaTime() / 1000;
+	  time += deltaTime;
+	  manager.render({ deltaTime: deltaTime, time: time });
+	}
+	
 	window.addEventListener('blur', function () {
-	  // TODO
+	  engine.stopRenderLoop(loop);
 	});
 	
 	window.addEventListener('focus', function () {
-	  // TODO
+	  engine.runRenderLoop(loop);
 	});
-	
-	function loop() {
-	  manager.render();
-	}
 	
 	engine.resize();
 	engine.runRenderLoop(loop);
@@ -250,15 +253,14 @@
 	    }
 	  }, {
 	    key: 'render',
-	    value: function render() {
+	    value: function render(_ref) {
+	      var time = _ref.time;
+	      var deltaTime = _ref.deltaTime;
 	      var player = this.player;
 	      var camera = this.camera;
 	      var entities = this.entities;
 	      var tiles = this.tiles;
 	
-	
-	      var time = new Date().valueOf() / 1000;
-	      var deltaTime = this.engine.getDeltaTime() / 1000;
 	
 	      camera.position.x = Math.max(camera.position.x, player.sprite.position.x);
 	
