@@ -101,12 +101,9 @@ export default class SceneManager {
     this.entities.push(entity);
   }
 
-  render() {
+  render({ time, deltaTime }) {
 
     const { player, camera, entities, tiles } = this;
-
-    const time = new Date().valueOf() / 1000;
-    const deltaTime = this.engine.getDeltaTime() / 1000;
 
     camera.position.x = Math.max(
       camera.position.x,
