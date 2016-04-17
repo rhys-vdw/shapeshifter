@@ -389,16 +389,31 @@
 	var PLAYER_SPEED = 10;
 	var JUMP_SPEED = 15;
 	var DECELERATION = 0.1;
+	var BULLET_SPEED = 40;
 	var FIRE_PERIOD = 0.1;
 	
-	var UP = 'ArrowUp';
-	var DOWN = 'ArrowDown';
-	var RIGHT = 'ArrowRight';
-	var LEFT = 'ArrowLeft';
-	var JUMP = 'KeyX';
-	var SHOOT = 'KeyZ';
+	var Key = {
+	  UP: 'ArrowUp',
+	  DOWN: 'ArrowDown',
+	  RIGHT: 'ArrowRight',
+	  LEFT: 'ArrowLeft',
+	  JUMP: 'KeyX',
+	  SHOOT: 'KeyZ'
+	};
 	
 	var Direction = {
+	  UP: new _babylonjs.Vector3(0, 1, 0),
+	  UP_RIGHT: new _babylonjs.Vector3(1, 1, 0).normalize(),
+	  RIGHT: new _babylonjs.Vector3(1, 0, 0),
+	  DOWN_RIGHT: new _babylonjs.Vector3(1, -1, 0).normalize(),
+	  DOWN: new _babylonjs.Vector3(0, -1, 0),
+	  DOWN_LEFT: new _babylonjs.Vector3(-1, -1, 0).normalize(),
+	  LEFT: new _babylonjs.Vector3(-1, 0, 0),
+	  UP_LEFT: new _babylonjs.Vector3(-1, 1, 0).normalize()
+	};
+	
+	/*
+	const Direction = {
 	  UP: 'UP',
 	  UP_RIGHT: 'UP_RIGHT',
 	  RIGHT: 'RIGHT',
@@ -406,8 +421,9 @@
 	  DOWN: 'DOWN',
 	  DOWN_LEFT: 'DOWN_LEFT',
 	  LEFT: 'LEFT',
-	  UP_LEFT: 'UP_LEFT'
-	};
+	  UP_LEFT: 'UP_LEFT',
+	}
+	*/
 	
 	var State = {
 	  STANDING: 'STANDING',
@@ -417,8 +433,6 @@
 	
 	var Player = function () {
 	  function Player(sprite, bulletFactory) {
-	    var _this = this;
-	
 	    _classCallCheck(this, Player);
 	
 	    this.sprite = sprite;
@@ -429,10 +443,6 @@
 	    this.lastFireTime = 0;
 	    this.bulletFactory = bulletFactory;
 	    this.aim = new _babylonjs.Vector3(1, 0, 0);
-	
-	    _input2.default.addListener(JUMP, function () {
-	      return _this.jump();
-	    });
 	  }
 	
 	  _createClass(Player, [{
@@ -442,32 +452,57 @@
 	      var time = _ref.time;
 	
 	
-	      // Update shooting.
+	      // Update aim and walking.
 	
-	      console.log('shoot?', _input2.default.isKeyDown(SHOOT));
-	      if (_input2.default.isKeyDown(SHOOT) && this.lastFireTime + FIRE_PERIOD <= time) {
-	        this.bulletFactory.create(this.sprite.position, new _babylonjs.Vector3(30, 0, 0));
-	        this.lastFireTime = time;
-	      }
-	
-	      // Update walking.
-	
-	      if (_input2.default.isKeyDown(RIGHT)) {
+	      if (_input2.default.isKeyDown(Key.RIGHT)) {
 	        this.acceleration.x = 5;
 	        this.isFacingRight = true;
-	      } else if (_input2.default.isKeyDown(LEFT)) {
+	        if (_input2.default.isKeyDown(Key.UP)) {
+	          this.aim = Direction.UP_RIGHT;
+	        } else if (_input2.default.isKeyDown(Key.DOWN)) {
+	          this.aim = Direction.DOWN_RIGHT;
+	        } else {
+	          this.aim = Direction.RIGHT;
+	        }
+	      } else if (_input2.default.isKeyDown(Key.LEFT)) {
 	        this.acceleration.x = -5;
 	        this.isFacingRight = false;
+	        if (_input2.default.isKeyDown(Key.UP)) {
+	          this.aim = Direction.UP_LEFT;
+	        } else if (_input2.default.isKeyDown(Key.DOWN)) {
+	          this.aim = Direction.DOWN_LEFT;
+	        } else {
+	          this.aim = Direction.LEFT;
+	        }
 	      } else {
 	        this.acceleration.x = 0;
+	
+	        if (_input2.default.isKeyDown(Key.UP)) {
+	          this.aim = Direction.UP;
+	        } else if (_input2.default.isKeyDown(Key.DOWN)) {
+	          this.aim = this.isFacingRight ? Direction.DOWN_RIGHT : Direction.DOWN_LEFT;
+	        } else {
+	          this.aim = this.isFacingRight ? Direction.RIGHT : Direction.LEFT;
+	        }
 	      }
 	
-	      if (_input2.default.isKeyDown(JUMP)) {
+	      // Update jump.
+	
+	      if (_input2.default.isKeyDown(Key.JUMP)) {
 	        this.velocity.y = JUMP_SPEED;
 	      }
 	
+	      // Update position.
+	
 	      this.velocity.addInPlace(this.acceleration.scale(deltaTime * PLAYER_SPEED));
 	      this.sprite.position.addInPlace(this.velocity.scale(deltaTime));
+	
+	      // Update shooting.
+	
+	      if (_input2.default.isKeyDown(Key.SHOOT) && this.lastFireTime + FIRE_PERIOD <= time) {
+	        this.bulletFactory.create(this.sprite.position, this.aim.scale(BULLET_SPEED));
+	        this.lastFireTime = time;
+	      }
 	
 	      if (Math.abs(this.velocity.x) < 0.1) {
 	        if (this.isWalking) {
